@@ -32,6 +32,9 @@ func initConfig(inCluster bool) (config *rest.Config, err error) {
 	return config, err
 }
 
+// InitK8sClient 初始化k8s的client
+//
+// inCluster 是否在集群中部署
 func InitK8sClient(inCluster bool) (*kubernetes.Clientset, error) {
 	config, err := initConfig(inCluster)
 	if err != nil {
@@ -41,6 +44,9 @@ func InitK8sClient(inCluster bool) (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(config)
 }
 
+// InitDynamic 初始化k8s的dynamic，用户实现无结构的资源操作
+//
+// inCluster 是否在集群中部署
 func InitDynamic(inCluster bool) (dynamic.Interface, error) {
 	config, err := initConfig(inCluster)
 	if err != nil {
