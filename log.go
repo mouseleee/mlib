@@ -157,7 +157,7 @@ func (f *FileLoggerWriter) Write(p []byte) (n int, err error) {
 
 	ct, _ := time.Parse(time.RFC3339, ori.TimeStamp)
 	ot := f.t
-	if ct.Second()-ot.Second() >= 3 {
+	if ct.Day()-ot.Day() >= 1 {
 		err := f.archive(ot)
 		if err != nil {
 			logger.Err(err).Msg("归档日志发生错误")
