@@ -3,12 +3,14 @@ module github.com/mouseleee/mouselib
 go 1.19
 
 require (
+	github.com/elastic/go-elasticsearch/v8 v8.4.0
 	github.com/rs/zerolog v1.28.0
 	k8s.io/client-go v0.17.2
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.1.0 // indirect
 	github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d // indirect
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/google/gofuzz v1.0.0 // indirect
