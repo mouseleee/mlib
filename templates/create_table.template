@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS {{.TableMeta.TableName}}{{$colidx := .MaxColIdx}}{{$idxidx := .MaxIndexIdx}}
+({{range $idx, $col := .TableCols}}
+  `{{.ColName}}` {{.ColType}}{{if .IsNull}} NULL{{else}} NOT NULL{{end}}{{if ne .DefaultVal ""}} DEFAULT '{{.DefaultVal}}'{{end}}{{if .IsAuto}} AUTO_INCREMENT{{end}}{{if .IsPrimary}} PRIMARY KEY{{end}}{{if ne .Comment ""}} COMMENT '{{.Comment}}'{{end}}{{if and (ne $idx $colidx) (eq $idxidx 0) }},{{end}}{{end}}
+  # INDEX [index_name] [index_type] (key_part)
+) {{if ne .TableMeta.Comment ""}}COMMENT '{{.TableMeta.Comment}}' {{end}}ENGINE {{.TableMeta.EngineInfo}}
