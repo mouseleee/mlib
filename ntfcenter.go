@@ -8,9 +8,10 @@ import (
 type Center struct {
 	Status int
 
-	Pubs   []Pub
-	Subs   []Sub
-	Topics map[string]chan []byte
+	Pubs        []Pub
+	Subs        []Sub
+	Topics      map[string]chan []byte
+	PubTopicRel map[string][]string
 
 	pubCt int
 	subCt int
@@ -37,6 +38,7 @@ func (c *Center) RegPub(topics ...string) *Pub {
 		tc := make(chan []byte, 10)
 		chs[i] = tc
 		c.Topics[t] = tc
+		c.PubTopicRel[pid] = topics
 	}
 	p := Pub{
 		Id:    pid,
@@ -55,9 +57,15 @@ func (c *Center) UnregPub(pubId string) {
 		}
 	}
 	if f != -1 {
+		c.m.Lock()
+		defer c.m.Unlock()
 		m := len(c.Pubs)
 		c.Pubs[f] = c.Pubs[m-1]
 		c.Pubs = c.Pubs[:m-1]
+
+		for _, t := range c.PubTopicRel[pubId] {
+			delete(c.Topics, t)
+		}
 	}
 }
 
@@ -93,13 +101,14 @@ func (c *Center) UnregSub(subId string) {
 
 func NewCenter() *Center {
 	return &Center{
-		Status: 0,
-		Pubs:   make([]Pub, 0),
-		Subs:   make([]Sub, 0),
-		Topics: make(map[string]chan []byte),
-		pubCt:  0,
-		subCt:  0,
-		m:      sync.Mutex{},
+		Status:      0,
+		Pubs:        make([]Pub, 0),
+		Subs:        make([]Sub, 0),
+		Topics:      make(map[string]chan []byte),
+		PubTopicRel: make(map[string][]string),
+		pubCt:       0,
+		subCt:       0,
+		m:           sync.Mutex{},
 	}
 }
 
