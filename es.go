@@ -1,7 +1,8 @@
 package mouselib
 
 import (
-	"io/ioutil"
+	"io"
+	"os"
 
 	es8 "github.com/elastic/go-elasticsearch/v8"
 )
@@ -9,7 +10,11 @@ import (
 // es相关
 
 func NewEsClient() (*es8.Client, error) {
-	cert, err := ioutil.ReadFile("./http_ca.crt")
+	cert, err := os.Open("./http_ca.crt")
+	if err != nil {
+		return nil, err
+	}
+	bs, err := io.ReadAll(cert)
 	if err != nil {
 		return nil, err
 	}
@@ -19,7 +24,7 @@ func NewEsClient() (*es8.Client, error) {
 		Username:  "elastic",
 		Password:  "123456",
 
-		CACert: cert,
+		CACert: bs,
 	}
 
 	return es8.NewClient(cfg)

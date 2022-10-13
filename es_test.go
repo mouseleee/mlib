@@ -12,6 +12,11 @@ import (
 	"github.com/mouseleee/mouselib"
 )
 
+type TestDesc struct {
+	Id   int    `json:"id"`
+	Text string `json:"text"`
+}
+
 func TestNewEsClientCreate(t *testing.T) {
 	t.FailNow()
 	es, err := mouselib.NewEsClient()
@@ -41,11 +46,6 @@ func TestNewEsClientCreate(t *testing.T) {
 	t.Logf("Client: %s", es8.Version)
 	t.Logf("Server: %s", r["version"].(map[string]interface{})["number"])
 	t.Log(strings.Repeat("~", 37))
-
-	type TestDesc struct {
-		Id   int    `json:"id"`
-		Text string `json:"text"`
-	}
 
 	testInst := TestDesc{
 		Id:   6,
