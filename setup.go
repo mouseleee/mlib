@@ -16,12 +16,12 @@ type MouseConfig struct {
 	LogPath string
 }
 
-var logger zerolog.Logger = DebugLogger()
+var logger zerolog.Logger
 
 // SetUp 初始化库中的一些全局变量以及初始化客户端需要的参数，不显式调用则使用默认值
 func SetUp(config MouseConfig) error {
 	if strings.ToLower(config.Mode) == "debug" {
-		logger = DebugLogger()
+		logger, _ = CommandLogger("debug")
 	}
 
 	return nil

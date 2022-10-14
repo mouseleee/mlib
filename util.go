@@ -13,7 +13,7 @@ import (
 
 // WriteFile 在指定路径写入数据
 //
-// path 文件路径 data 数据内容，[]byte类型
+// path 文件路径 data []byte类型数据
 func WriteFile(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	if _, err := os.Stat(dir); err != nil {
