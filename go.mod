@@ -5,14 +5,16 @@ go 1.19
 require (
 	github.com/Shopify/sarama v1.37.2
 	github.com/elastic/go-elasticsearch/v8 v8.4.0
+	github.com/go-redis/redis/v9 v9.0.0-rc.1
 	github.com/google/uuid v1.1.1
-	github.com/hashicorp/go-uuid v1.0.3
 	github.com/rs/zerolog v1.28.0
 	k8s.io/client-go v0.17.2
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/eapache/go-resiliency v1.3.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
@@ -24,6 +26,7 @@ require (
 	github.com/googleapis/gnostic v0.0.0-20170729233727-0c5108395e2d // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/imdario/mergo v0.3.5 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
