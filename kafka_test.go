@@ -63,8 +63,7 @@ func TestKafkaConsumer(t *testing.T) {
 		consumer1 := mouselib.Consumer{
 			Ready:   make(chan bool),
 			GroupId: "test",
-			Brokers: strings.Split(brokers, ","),
-			Handler: func(msg *sarama.ConsumerMessage) error {
+			Handler: func(msg *sarama.ConsumerMessage, out chan<- string) error {
 				v := msg.Value
 				t.Log(string(v))
 

@@ -100,8 +100,8 @@ func DefaultKafkaProducerConfig() *sarama.Config {
 type Consumer struct {
 	Ready   chan bool
 	GroupId string
-	Brokers []string
-	Handler func(msg *sarama.ConsumerMessage) error
+	Out     chan<- string
+	Handler func(msg *sarama.ConsumerMessage, out chan<- string) error
 }
 
 // Setup 在一个新session启动时运行此方法
@@ -122,14 +122,12 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	for {
 		select {
 		case message := <-claim.Messages():
-			func() {
-				err := consumer.Handler(message)
-				if err != nil {
-					session.ResetOffset(message.Topic, message.Partition, message.Offset, "")
-				}
-				session.MarkMessage(message, "")
-				session.Commit()
-			}()
+			err := consumer.Handler(message, consumer.Out)
+			if err != nil {
+				session.ResetOffset(message.Topic, message.Partition, message.Offset, "")
+			}
+			session.MarkMessage(message, "")
+			session.Commit()
 		// session.Context()结束后此方法需要返回，如果没有结束会抛出`ErrRebalanceInProgress`，当kafka重新平衡（rebalance）的时候会抛出`read tcp <ip>:<port>: i/o timeout`
 		case <-session.Context().Done():
 			return nil
