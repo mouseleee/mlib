@@ -60,15 +60,9 @@ func TestKafkaConsumer(t *testing.T) {
 			t.Error(err)
 		}
 
-		consumer1 := mouselib.Consumer{
+		consumer1 := mouselib.DefaultConsumer{
 			Ready:   make(chan bool),
 			GroupId: "test",
-			Handler: func(msg *sarama.ConsumerMessage, out chan<- string) error {
-				v := msg.Value
-				t.Log(string(v))
-
-				return nil
-			},
 		}
 
 		ctx, cancel := context.WithCancel(context.Background())

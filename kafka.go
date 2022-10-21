@@ -97,35 +97,29 @@ func DefaultKafkaProducerConfig() *sarama.Config {
 }
 
 // Consumer 消费者对象，直接创建
-type Consumer struct {
+type DefaultConsumer struct {
 	Ready   chan bool
 	GroupId string
-	Out     chan<- string
-	Handler func(msg *sarama.ConsumerMessage, out chan<- string) error
 }
 
 // Setup 在一个新session启动时运行此方法
-func (consumer *Consumer) Setup(session sarama.ConsumerGroupSession) error {
+func (consumer *DefaultConsumer) Setup(session sarama.ConsumerGroupSession) error {
 	// 清除consumer的ready状态
 	close(consumer.Ready)
 	return nil
 }
 
 // Cleanup 在session结束时调用，发生在ConsumeClaim的goroutine退出之后
-func (consumer *Consumer) Cleanup(session sarama.ConsumerGroupSession) error {
+func (consumer *DefaultConsumer) Cleanup(session sarama.ConsumerGroupSession) error {
 	return nil
 }
 
 // ConsumeClaim 循环接受消费的消息
-func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+func (consumer *DefaultConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	// 下面的代码不能在goroutine运行，本身这个函数就是在goroutine中运行的
 	for {
 		select {
 		case message := <-claim.Messages():
-			err := consumer.Handler(message, consumer.Out)
-			if err != nil {
-				session.ResetOffset(message.Topic, message.Partition, message.Offset, "")
-			}
 			session.MarkMessage(message, "")
 			session.Commit()
 		// session.Context()结束后此方法需要返回，如果没有结束会抛出`ErrRebalanceInProgress`，当kafka重新平衡（rebalance）的时候会抛出`read tcp <ip>:<port>: i/o timeout`
