@@ -51,13 +51,13 @@ func DefaultConsumerConfig() *sarama.Config {
 	return conf
 }
 
-func DefaultConsumer(brokers string) (sarama.Consumer, error) {
+func DefaultConsumer(brokers string, group string) (sarama.ConsumerGroup, error) {
 	addrs := strings.Split(brokers, ",")
-	prd, err := sarama.NewConsumer(addrs, DefaultProducerConfig())
+	csm, err := sarama.NewConsumerGroup(addrs, group, DefaultProducerConfig())
 	if err != nil {
 		return nil, KafkaError("创建消费者失败", err)
 	}
-	return prd, nil
+	return csm, nil
 }
 
 // CreateTopic 创建topic

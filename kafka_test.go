@@ -1,8 +1,8 @@
 package mouselib_test
 
 import (
+	"context"
 	"fmt"
-	"sync"
 	"testing"
 
 	"github.com/Shopify/sarama"
@@ -26,7 +26,7 @@ func TestKafkaProducerConsumer(t *testing.T) {
 		t.Error(err)
 	}
 	defer prd.Close()
-	csm, err := mouselib.DefaultConsumer(brokers)
+	csm, err := mouselib.DefaultConsumer(brokers, "mousegroup")
 	if err != nil {
 		t.Error(err)
 	}
@@ -45,30 +45,36 @@ func TestKafkaProducerConsumer(t *testing.T) {
 		count--
 	}
 
-	parts, err := csm.Partitions(topic)
-	if err != nil {
-		t.Error(err)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	for {
+		err := csm.Consume(ctx, []string{topic}, &MyConsumer{})
+		if err != nil {
+			t.Error(err)
+		}
 	}
-	wg := sync.WaitGroup{}
-	for _, part := range parts {
-		wg.Add(1)
-		go func(p int32) {
-			defer wg.Done()
-			pcsm, err := csm.ConsumePartition(topic, p, sarama.OffsetNewest)
-			if err != nil {
-				t.Error(err)
-			}
-			defer pcsm.Close()
+}
 
-			for {
-				select {
-				case msg := <-pcsm.Messages():
-					println(string(msg.Value))
-				case err := <-pcsm.Errors():
-					t.Error(err)
-				}
-			}
-		}(part)
+type MyConsumer struct {
+}
+
+func (c *MyConsumer) Setup(session sarama.ConsumerGroupSession) error {
+	println("init...")
+	return nil
+}
+
+func (c *MyConsumer) Cleanup(session sarama.ConsumerGroupSession) error {
+	return nil
+}
+
+func (c *MyConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	for {
+		select {
+		case msg := <-claim.Messages():
+			println(string(msg.Value))
+			session.Commit()
+		case <-session.Context().Done():
+			return nil
+		}
 	}
-	wg.Wait()
 }
