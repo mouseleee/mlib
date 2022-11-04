@@ -1,11 +1,7 @@
 package mouselib_test
 
 import (
-	"context"
 	"fmt"
-	"os"
-	"os/signal"
-	"strings"
 	"sync"
 	"testing"
 
@@ -13,84 +9,66 @@ import (
 	"github.com/mouseleee/mouselib"
 )
 
-func TestKafkaProducer(t *testing.T) {
-	// t.FailNow()
-	brokers := "localhost:9093"
-	topic := "mewo"
+var brokers = "localhost:9093"
 
-	provider := mouselib.NewProducerProvider(brokers, 1, mouselib.DefaultKafkaProducerConfig)
-
-	producer := provider.Borrow()
-	defer provider.Clear()
-	defer provider.Release(producer)
-
-	for i := 0; i < 100; i++ {
-		// BeginTxn must be called before any messages.
-		err := producer.BeginTxn()
-		if err != nil {
-			t.Logf("Message consumer: unable to start transaction: %+v", err)
-			t.Error(err)
-		}
-		// Produce current record in producer transaction.
-		producer.Input() <- &sarama.ProducerMessage{
-			Topic: topic,
-			Value: sarama.ByteEncoder(fmt.Sprintf("%d fix message", i)),
-		}
-
-		// Commit producer transaction.
-		err = producer.CommitTxn()
-		if err != nil {
-			t.Log("error on CommitTxn")
-			t.Error(err)
-		}
+func TestCreateTopic(t *testing.T) {
+	t.FailNow()
+	err := mouselib.CreateTopic(brokers, "mousetest", 1, 1)
+	if err != nil {
+		t.Error(err)
 	}
 }
 
-func TestKafkaConsumer(t *testing.T) {
-	t.FailNow()
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
+func TestKafkaProducerConsumer(t *testing.T) {
+	topic := "mousetest"
+	prd, err := mouselib.DefaultProducer(brokers)
+	if err != nil {
+		t.Error(err)
+	}
+	defer prd.Close()
+	csm, err := mouselib.DefaultConsumer(brokers)
+	if err != nil {
+		t.Error(err)
+	}
+	defer csm.Close()
 
-	go func() {
-		brokers := "localhost:9093"
-		groupId := "test"
+	count := 100
 
-		client, err := mouselib.NewConsumerClient(brokers, groupId, mouselib.DefaultKafkaConsumerGroupConfig)
+	for count > 0 {
+		_, _, err := prd.SendMessage(&sarama.ProducerMessage{
+			Topic: topic,
+			Value: sarama.StringEncoder(fmt.Sprintf("这是第%d条测试消息", count)),
+		})
 		if err != nil {
 			t.Error(err)
 		}
+		count--
+	}
 
-		consumer1 := mouselib.DefaultConsumer{
-			Ready:   make(chan bool),
-			GroupId: "test",
-		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		wg := &sync.WaitGroup{}
+	parts, err := csm.Partitions(topic)
+	if err != nil {
+		t.Error(err)
+	}
+	wg := sync.WaitGroup{}
+	for _, part := range parts {
 		wg.Add(1)
-
-		go func() {
+		go func(p int32) {
 			defer wg.Done()
-			for {
-				// `Consume` should be called inside an infinite loop, when a
-				// server-side rebalance happens, the consumer session will need to be
-				// recreated to get the new claims
-				if err := client.Consume(ctx, strings.Split("mewo", ","), &consumer1); err != nil {
-					t.Errorf("Error from consumer: %v", err)
-				}
-				// check if context was cancelled, signaling that the consumer should stop
-				if ctx.Err() != nil {
-					return
-				}
-				consumer1.Ready = make(chan bool)
+			pcsm, err := csm.ConsumePartition(topic, p, sarama.OffsetNewest)
+			if err != nil {
+				t.Error(err)
 			}
-		}()
+			defer pcsm.Close()
 
-		<-consumer1.Ready
-		wg.Wait()
-
-		cancel()
-	}()
-
-	<-sig
+			for {
+				select {
+				case msg := <-pcsm.Messages():
+					println(string(msg.Value))
+				case err := <-pcsm.Errors():
+					t.Error(err)
+				}
+			}
+		}(part)
+	}
+	wg.Wait()
 }

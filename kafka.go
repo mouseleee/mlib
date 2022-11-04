@@ -2,148 +2,95 @@ package mouselib
 
 import (
 	"strings"
-	"sync"
+	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/google/uuid"
 )
 
-// kafka生产者/消费者out-of-box
-
-// ProducerProvider 生产者provider，不直接使用
-type ProducerProvider struct {
-	producers        []sarama.AsyncProducer
-	producerProvider func() sarama.AsyncProducer
-
-	l sync.Mutex
-}
-
-// NewProducerProvider 初始化生产者provider
+// 提供一个默认的exactly-once的生产者和消费者，并且提供自定义配置来生成生产者盒消费者
 //
-// brokers kafka地址 init 初始大小 conf 生产者配置
-func NewProducerProvider(brokers string, init int, conf func() *sarama.Config) *ProducerProvider {
-	provider := &ProducerProvider{
-		producers: make([]sarama.AsyncProducer, 0, init),
-	}
-	provider.producerProvider = func() sarama.AsyncProducer {
-		config := conf()
-		if config.Producer.Transaction.ID == "" {
-			config.Producer.Transaction.ID = uuid.New().String()
-		}
-		producer, err := sarama.NewAsyncProducer(strings.Split(brokers, ","), config)
-		if err != nil {
-			return nil
-		}
-		return producer
-	}
-	return provider
+// 提供修改kafka集群配置，topic操作的方便api
+
+type KafkaErr struct {
+	msg string
+	err error
 }
 
-// Borrow 获取一个生产者
-func (p *ProducerProvider) Borrow() (producer sarama.AsyncProducer) {
-	p.l.Lock()
-	defer p.l.Unlock()
-
-	if len(p.producers) == 0 {
-		for {
-			producer = p.producerProvider()
-			if producer != nil {
-				return
-			}
-		}
-	}
-
-	idx := len(p.producers) - 1
-	producer = p.producers[idx]
-	p.producers = p.producers[:idx]
-
-	return
+func (e KafkaErr) Error() string {
+	return e.msg + " => " + e.err.Error()
 }
 
-// Release 释放一个生产者
-func (p *ProducerProvider) Release(producer sarama.AsyncProducer) {
-	p.l.Lock()
-	defer p.l.Unlock()
-
-	if producer.TxnStatus()&sarama.ProducerTxnFlagInError != 0 {
-		_ = producer.Close()
-		return
-	}
-	p.producers = append(p.producers, producer)
+func KafkaError(msg string, err error) KafkaErr {
+	return KafkaErr{msg: msg, err: err}
 }
 
-// Clear 清理生产者provider
-func (p *ProducerProvider) Clear() {
-	p.l.Lock()
-	defer p.l.Unlock()
-
-	for _, producer := range p.producers {
-		producer.Close()
-	}
-
-	p.producers = p.producers[:0]
-}
-
-// DefaultKafkaProducerConfig 默认producer配置，保证消息消费exact-once
-func DefaultKafkaProducerConfig() *sarama.Config {
+func DefaultProducerConfig() *sarama.Config {
 	conf := sarama.NewConfig()
-
-	conf.Net.MaxOpenRequests = 1
-	conf.Producer.RequiredAcks = sarama.WaitForAll
 	conf.Producer.Idempotent = true
-	conf.Producer.Transaction.ID = "sarama"
-
+	conf.Net.MaxOpenRequests = 1
+	conf.Producer.Return.Successes = true
+	conf.Producer.Retry.Max = 3
+	conf.Producer.RequiredAcks = sarama.WaitForAll
+	conf.Producer.Partitioner = sarama.NewRoundRobinPartitioner
 	return conf
 }
 
-// Consumer 消费者对象，直接创建
-type DefaultConsumer struct {
-	Ready   chan bool
-	GroupId string
+func DefaultProducer(brokers string) (sarama.SyncProducer, error) {
+	addrs := strings.Split(brokers, ",")
+	prd, err := sarama.NewSyncProducer(addrs, DefaultProducerConfig())
+	if err != nil {
+		return nil, KafkaError("创建生产者失败", err)
+	}
+	return prd, nil
 }
 
-// Setup 在一个新session启动时运行此方法
-func (consumer *DefaultConsumer) Setup(session sarama.ConsumerGroupSession) error {
-	// 清除consumer的ready状态
-	close(consumer.Ready)
-	return nil
+func DefaultConsumerConfig() *sarama.Config {
+	conf := sarama.NewConfig()
+	conf.Consumer.Offsets.AutoCommit.Enable = false
+	conf.Consumer.Offsets.Initial = sarama.OffsetOldest
+	return conf
 }
 
-// Cleanup 在session结束时调用，发生在ConsumeClaim的goroutine退出之后
-func (consumer *DefaultConsumer) Cleanup(session sarama.ConsumerGroupSession) error {
-	return nil
+func DefaultConsumer(brokers string) (sarama.Consumer, error) {
+	addrs := strings.Split(brokers, ",")
+	prd, err := sarama.NewConsumer(addrs, DefaultProducerConfig())
+	if err != nil {
+		return nil, KafkaError("创建消费者失败", err)
+	}
+	return prd, nil
 }
 
-// ConsumeClaim 循环接受消费的消息
-func (consumer *DefaultConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	// 下面的代码不能在goroutine运行，本身这个函数就是在goroutine中运行的
-	for {
-		select {
-		case message := <-claim.Messages():
-			session.MarkMessage(message, "")
-			session.Commit()
-		// session.Context()结束后此方法需要返回，如果没有结束会抛出`ErrRebalanceInProgress`，当kafka重新平衡（rebalance）的时候会抛出`read tcp <ip>:<port>: i/o timeout`
-		case <-session.Context().Done():
-			return nil
+// CreateTopic 创建topic
+func CreateTopic(brokers string, topic string, partition int32, replica int16) error {
+	addrs := strings.Split(brokers, ",")
+	cli, err := sarama.NewClient(addrs, sarama.NewConfig())
+	if err != nil {
+		return KafkaError("初始化Kafka客户端失败", err)
+	}
+	defer cli.Close()
+
+	ctrlr, err := cli.Controller()
+	if err != nil {
+		return KafkaError("", err)
+	}
+
+	rsp, err := ctrlr.CreateTopics(&sarama.CreateTopicsRequest{
+		TopicDetails: map[string]*sarama.TopicDetail{
+			topic: {
+				NumPartitions:     partition,
+				ReplicationFactor: replica,
+			},
+		},
+		Timeout: 3 * time.Second,
+	})
+	if err != nil {
+		return KafkaError("创建Topic请求发送失败", err)
+	}
+	err = nil
+	for t, e := range rsp.TopicErrors {
+		if e != nil {
+			err = KafkaError("topic "+t+"创建失败", e)
 		}
 	}
-}
-
-// DefaultKafkaConsumerGroupConfig 默认消费者配置，手动提交消费消息
-func DefaultKafkaConsumerGroupConfig() *sarama.Config {
-	conf := sarama.NewConfig()
-
-	conf.Consumer.IsolationLevel = sarama.ReadCommitted
-	conf.Consumer.Offsets.AutoCommit.Enable = false
-	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
-	conf.Consumer.Offsets.Initial = sarama.OffsetNewest
-
-	return conf
-}
-
-// NewConsumerClient 获取消费者client
-func NewConsumerClient(brokers string, groupId string, conf func() *sarama.Config) (client sarama.ConsumerGroup, err error) {
-	client, err = sarama.NewConsumerGroup(strings.Split(brokers, ","), groupId, conf())
-
-	return
+	return err
 }
