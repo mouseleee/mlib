@@ -60,6 +60,15 @@ func DefaultConsumer(brokers string, group string) (sarama.ConsumerGroup, error)
 	return csm, nil
 }
 
+func CustomConsumer(brokers string, group string, config *sarama.Config) (sarama.ConsumerGroup, error) {
+	addrs := strings.Split(brokers, ",")
+	csm, err := sarama.NewConsumerGroup(addrs, group, config)
+	if err != nil {
+		return nil, KafkaError("创建消费者失败", err)
+	}
+	return csm, nil
+}
+
 // CreateTopic 创建topic
 func CreateTopic(brokers string, topic string, partition int32, replica int16) error {
 	addrs := strings.Split(brokers, ",")

@@ -3,13 +3,15 @@ package mouselib_test
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 	"testing"
 
 	"github.com/Shopify/sarama"
 	"github.com/mouseleee/mouselib"
 )
 
-var brokers = "localhost:9093"
+var brokers = "localhost:9095"
 
 func TestCreateTopic(t *testing.T) {
 	t.FailNow()
@@ -20,6 +22,7 @@ func TestCreateTopic(t *testing.T) {
 }
 
 func TestKafkaProduceMsg(t *testing.T) {
+	sarama.Logger = log.New(os.Stdout, "sarama=>", 0)
 	topic := "mousetest"
 	prd, err := mouselib.DefaultProducer(brokers)
 	if err != nil {
