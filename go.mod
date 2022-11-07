@@ -4,9 +4,7 @@ go 1.19
 
 require (
 	github.com/Shopify/sarama v1.37.2
-	github.com/elastic/go-elasticsearch/v8 v8.4.0
 	github.com/go-redis/redis/v9 v9.0.0-rc.1
-	github.com/google/uuid v1.1.1
 	github.com/rs/zerolog v1.28.0
 	k8s.io/client-go v0.17.2
 )
@@ -18,7 +16,6 @@ require (
 	github.com/eapache/go-resiliency v1.3.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
-	github.com/elastic/elastic-transport-go/v8 v8.1.0 // indirect
 	github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d // indirect
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect

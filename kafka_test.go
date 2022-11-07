@@ -19,18 +19,13 @@ func TestCreateTopic(t *testing.T) {
 	}
 }
 
-func TestKafkaProducerConsumer(t *testing.T) {
+func TestKafkaProduceMsg(t *testing.T) {
 	topic := "mousetest"
 	prd, err := mouselib.DefaultProducer(brokers)
 	if err != nil {
 		t.Error(err)
 	}
 	defer prd.Close()
-	csm, err := mouselib.DefaultConsumer(brokers, "mousegroup")
-	if err != nil {
-		t.Error(err)
-	}
-	defer csm.Close()
 
 	count := 100
 
@@ -44,6 +39,15 @@ func TestKafkaProducerConsumer(t *testing.T) {
 		}
 		count--
 	}
+}
+
+func TestKafkaConsumeMsg(t *testing.T) {
+	topic := "mousetest"
+	csm, err := mouselib.DefaultConsumer(brokers, "mousegroup")
+	if err != nil {
+		t.Error(err)
+	}
+	defer csm.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
