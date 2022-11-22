@@ -1,23 +1,23 @@
-package mouselib_test
+package msql_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/mouseleee/mouselib"
+	"github.com/mouseleee/mlib/msql"
 )
 
 func TestRegisterTable(t *testing.T) {
-	s := mouselib.Student{
+	s := msql.Student{
 		Name:  "test",
 		Age:   15,
 		Birth: genBirth(1995, 6, 16),
-		Base: mouselib.Base{
+		Base: msql.Base{
 			CreateTime: time.Now(),
 			UpdateTime: time.Now(),
 		},
 	}
-	mouselib.RegisterTable(s, "test")
+	msql.RegisterTable(s, "test")
 }
 
 func genBirth(year, month, day uint) time.Time {
@@ -26,17 +26,17 @@ func genBirth(year, month, day uint) time.Time {
 
 func TestExtractTableTags(t *testing.T) {
 	t.FailNow()
-	s := mouselib.Student{
+	s := msql.Student{
 		Name:  "test",
 		Age:   15,
 		Birth: genBirth(1995, 6, 16),
-		Base: mouselib.Base{
+		Base: msql.Base{
 			CreateTime: time.Now(),
 			UpdateTime: time.Now(),
 		},
 	}
 
-	_, err := mouselib.ExtractColFromTableType(s)
+	_, err := msql.ExtractColFromTableType(s)
 	if err != nil {
 		t.Error(err)
 	}

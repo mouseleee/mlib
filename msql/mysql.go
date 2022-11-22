@@ -1,4 +1,4 @@
-package mouselib
+package msql
 
 import (
 	"fmt"
@@ -9,6 +9,9 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/mouseleee/mlib/mlog"
+	"github.com/rs/zerolog"
 )
 
 type TableMetaData struct {
@@ -64,6 +67,14 @@ const (
 
 	INNODB = "innodb"
 )
+
+const defaultLogLevel = "debug"
+
+var logger zerolog.Logger
+
+func init() {
+	logger, _ = mlog.CommandLogger(defaultLogLevel)
+}
 
 type MouseMysqlErr struct {
 	msg string

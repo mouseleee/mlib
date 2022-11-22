@@ -1,4 +1,4 @@
-package mouselib
+package mutil
 
 import (
 	"io"
@@ -10,7 +10,7 @@ import (
 func WriteFile(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	if _, err := os.Stat(dir); err != nil {
-		err = os.MkdirAll(dir, os.ModeDir|0770)
+		err = os.MkdirAll(dir, os.ModeDir|0o700)
 		if err != nil {
 			return err
 		}
@@ -23,7 +23,7 @@ func WriteFile(path string, data []byte) error {
 			return err
 		}
 	} else {
-		f, err = os.OpenFile(path, os.O_WRONLY, 0770)
+		f, err = os.OpenFile(path, os.O_WRONLY, 0o700)
 		if err != nil {
 			return err
 		}

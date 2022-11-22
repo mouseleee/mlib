@@ -3,12 +3,22 @@ package mouselib
 import (
 	"path/filepath"
 
+	"github.com/mouseleee/mlib/mlog"
+	"github.com/rs/zerolog"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 )
+
+const defaultLogLevel = "debug"
+
+var logger zerolog.Logger
+
+func init() {
+	logger, _ = mlog.CommandLogger(defaultLogLevel)
+}
 
 func initConfig(inCluster bool) (config *rest.Config, err error) {
 	if inCluster {

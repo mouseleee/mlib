@@ -1,7 +1,8 @@
-package mouselib
+package mlog
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -11,7 +12,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// CommandLogger 命令行logger，可以直接使用，默认level为DEBUG
+// CommandLogger 命令行logger，直接使用，默认level为DEBUG，如果level不为[debug/info/warn/error/fatal]会返回错误
 func CommandLogger(level string) (zerolog.Logger, error) {
 	l, err := zerolog.ParseLevel(level)
 	if err != nil {
@@ -36,8 +37,7 @@ func CommandLogger(level string) (zerolog.Logger, error) {
 	return zerolog.New(wr).With().Timestamp().Caller().Logger().Level(l), nil
 }
 
-// FileLogger 文件logger，错误必须处理，如果路径无效则创建logger失败
-// 目前固定每天归档日志
+// FileLogger 文件logger，如果路径无效则创建logger失败，roll为滚动时间间隔，单位为秒
 func FileLogger(filePath string, roll int, level string) (zerolog.Logger, error) {
 	l, err := zerolog.ParseLevel(level)
 	if err != nil {
@@ -49,9 +49,7 @@ func FileLogger(filePath string, roll int, level string) (zerolog.Logger, error)
 		return zerolog.Logger{}, err
 	}
 
-	multi := zerolog.MultiLevelWriter(wr, os.Stderr)
-
-	return zerolog.New(multi).With().Timestamp().Logger().Level(l), nil
+	return zerolog.New(wr).With().Timestamp().Caller().Logger().Level(l), nil
 }
 
 type FileLoggerWriter struct {
@@ -167,7 +165,7 @@ func (f *FileLoggerWriter) archive(ot time.Time) error {
 	}()
 
 	odir := filepath.Join(f.dir, suffix)
-	os.Mkdir(odir, os.ModeDir|0700)
+	os.Mkdir(odir, os.ModeDir|0o700)
 
 	olds := make([]string, 0)
 	for _, level := range levels {
@@ -213,7 +211,7 @@ func (f *FileLoggerWriter) Write(p []byte) (n int, err error) {
 	if ct.Second()-ot.Second() >= f.roll {
 		err := f.archive(ot)
 		if err != nil {
-			logger.Err(err).Msg("归档日志发生错误")
+			return 0, errors.New("归档日志错误")
 		}
 	}
 

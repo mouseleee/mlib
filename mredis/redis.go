@@ -1,4 +1,4 @@
-package mouselib
+package mredis
 
 import (
 	"context"

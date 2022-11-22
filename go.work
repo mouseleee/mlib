@@ -1,0 +1,10 @@
+go 1.19
+
+use (
+	./mk8s
+	./mkafka
+	./mlog
+	./mredis
+	./msql
+	./mutil
+)
