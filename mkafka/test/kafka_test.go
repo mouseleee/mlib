@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Shopify/sarama"
 	"github.com/mouseleee/mlib/mkafka"
 	"github.com/rs/zerolog"
 )
@@ -34,7 +35,32 @@ func TestDefaultConsumerConfig(t *testing.T) {
 func TestDefaultConsumerGroup(t *testing.T) {
 	_, err := mkafka.DefaultConsumerGroup(brokers, "test.group")
 	if err != nil {
-		t.Error()
+		t.Error(err)
+	}
+}
+
+func TestCustomConsumerGroup(t *testing.T) {
+	_, err := mkafka.CustomConsumerGroup(brokers, "test.group", sarama.NewConfig())
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestTopicOp(t *testing.T) {
+	cli, err := mkafka.CreateKafkaClient(brokers, sarama.NewConfig())
+	if err != nil {
+		t.Error(err)
+	}
+	defer cli.Close()
+
+	err = mkafka.CreateTopic(cli, "TEST_TOPIC", 1, 1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = mkafka.RemoveTopic(cli, []string{"TEST_TOPIC"})
+	if err != nil {
+		t.Error(err)
 	}
 }
 

@@ -109,8 +109,35 @@ func CreateTopic(client sarama.Client, topic string, partition int32, replica in
 	}
 
 	for t, e := range rsp.TopicErrors {
-		if e != nil {
-			logger.Err(e).Str("topic", t).Msg("创建Topic失败")
+		if e.Err != 0 {
+			logger.Err(e.Err).Str("topic", t).Msg("创建Topic失败")
+			return e
+		}
+	}
+	return nil
+}
+
+// RemoveTopic 删除topic
+func RemoveTopic(client sarama.Client, topics []string) error {
+	ctrlr, err := client.RefreshController()
+	if err != nil {
+		logger.Err(err).Msg("获取Controller失败")
+		return err
+	}
+	defer ctrlr.Close()
+
+	rsp, err := ctrlr.DeleteTopics(&sarama.DeleteTopicsRequest{
+		Topics:  topics,
+		Timeout: 5 * time.Second,
+	})
+	if err != nil {
+		logger.Err(err).Msg("发送删除Topic请求失败")
+		return err
+	}
+
+	for t, e := range rsp.TopicErrorCodes {
+		if e != 0 {
+			logger.Err(e).Str("topic", t).Msg("删除Topic失败")
 			return e
 		}
 	}
