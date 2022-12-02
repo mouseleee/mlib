@@ -59,9 +59,8 @@ type FileLoggerWriter struct {
 	Error io.Writer
 	Fatal io.Writer
 
-	t    time.Time
-	roll int
-	dir  string
+	t   time.Time
+	dir string
 }
 
 var levels = []zerolog.Level{zerolog.DebugLevel, zerolog.InfoLevel, zerolog.WarnLevel, zerolog.ErrorLevel, zerolog.FatalLevel}
@@ -83,6 +82,10 @@ func formatLevel(l zerolog.Level) string {
 	return ""
 }
 
+func dayZero(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
+}
+
 func NewFileLoggerWriter(filePath string, roll int, level zerolog.Level) (*FileLoggerWriter, error) {
 	e := make(chan error, 1)
 	defer func() {
@@ -95,7 +98,7 @@ func NewFileLoggerWriter(filePath string, roll int, level zerolog.Level) (*FileL
 	}()
 
 	if _, err := os.Stat(filePath); err != nil {
-		err = os.MkdirAll(filePath, os.ModeDir|0700)
+		err = os.MkdirAll(filePath, os.ModeDir|0o700)
 		if err != nil {
 			e <- err
 			return nil, err
@@ -144,15 +147,15 @@ func NewFileLoggerWriter(filePath string, roll int, level zerolog.Level) (*FileL
 		}
 	}
 
-	wr.t = time.Now()
-	wr.roll = roll
+	wr.t = dayZero(time.Now())
 	wr.dir = filePath
 
 	e <- nil
 	return &wr, nil
 }
 
-func (f *FileLoggerWriter) archive(ot time.Time) error {
+func (f *FileLoggerWriter) archive() error {
+	ot := f.t
 	suffix := fmt.Sprintf("%d%02d%02d%02d%02d%02d", ot.Year(), ot.Month(), ot.Day(), ot.Hour(), ot.Minute(), ot.Second())
 	created := make([]string, 0)
 	e := make(chan error, 1)
@@ -194,7 +197,7 @@ func (f *FileLoggerWriter) archive(ot time.Time) error {
 	}
 
 	e <- nil
-	f.t = time.Now()
+	f.t = dayZero(time.Now())
 	return nil
 }
 
@@ -207,9 +210,9 @@ func (f *FileLoggerWriter) Write(p []byte) (n int, err error) {
 	json.Unmarshal(p, &ori)
 
 	ct, _ := time.Parse(time.RFC3339, ori.TimeStamp)
-	ot := f.t
-	if ct.Second()-ot.Second() >= f.roll {
-		err := f.archive(ot)
+
+	if ct.Unix()-f.t.Unix() >= 86400 {
+		err := f.archive()
 		if err != nil {
 			return 0, errors.New("归档日志错误")
 		}
