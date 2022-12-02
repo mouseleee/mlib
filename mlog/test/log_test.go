@@ -2,7 +2,6 @@ package mlog_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/mouseleee/mlib/mlog"
 	"github.com/rs/zerolog"
@@ -47,7 +46,7 @@ func TestCommandLoggerUsage(t *testing.T) {
 }
 
 func TestFileLogger(t *testing.T) {
-	l, err := mlog.FileLogger("./log", 5, "debug")
+	l, err := mlog.FileLogger("./log", "debug")
 	if err != nil {
 		t.Error(err)
 	}
@@ -55,6 +54,5 @@ func TestFileLogger(t *testing.T) {
 	l.Debug().Str("test", "bob").Msg("test print")
 	l.Info().Str("test", "bob").Msg("test print")
 	l.Warn().Str("test", "bob").Msg("test print")
-	time.Sleep(7 * time.Second)
 	l.Error().Str("test", "bob").Msg("test print")
 }

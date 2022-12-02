@@ -12,6 +12,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
+func init() {
+	zerolog.TimeFieldFormat = "2006-01-02 15:04:05"
+}
+
 // CommandLogger 命令行logger，直接使用，默认level为DEBUG，如果level不为[debug/info/warn/error/fatal]会返回错误
 func CommandLogger(level string) (zerolog.Logger, error) {
 	l, err := zerolog.ParseLevel(level)
@@ -37,14 +41,14 @@ func CommandLogger(level string) (zerolog.Logger, error) {
 	return zerolog.New(wr).With().Timestamp().Caller().Logger().Level(l), nil
 }
 
-// FileLogger 文件logger，如果路径无效则创建logger失败，roll为滚动时间间隔，单位为秒
-func FileLogger(filePath string, roll int, level string) (zerolog.Logger, error) {
+// FileLogger 文件logger，如果路径无效则创建logger失败，文件日志默认按天滚动
+func FileLogger(filePath string, level string) (zerolog.Logger, error) {
 	l, err := zerolog.ParseLevel(level)
 	if err != nil {
 		return zerolog.Logger{}, err
 	}
 
-	wr, err := NewFileLoggerWriter(filePath, roll, l)
+	wr, err := NewFileLoggerWriter(filePath, l)
 	if err != nil {
 		return zerolog.Logger{}, err
 	}
@@ -86,7 +90,7 @@ func dayZero(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
 }
 
-func NewFileLoggerWriter(filePath string, roll int, level zerolog.Level) (*FileLoggerWriter, error) {
+func NewFileLoggerWriter(filePath string, level zerolog.Level) (*FileLoggerWriter, error) {
 	e := make(chan error, 1)
 	defer func() {
 		if <-e != nil {
