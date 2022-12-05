@@ -25,7 +25,9 @@ func CommandLogger(level string) (zerolog.Logger, error) {
 
 	wr := zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
 		w.NoColor = false
-		w.TimeFormat = "2006-01-02 15:04:05"
+		w.FormatTimestamp = func(i interface{}) string {
+			return i.(string)
+		}
 
 		w.FormatMessage = func(i interface{}) string {
 			return fmt.Sprintf("%s", i)
